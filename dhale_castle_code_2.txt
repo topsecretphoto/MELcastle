@@ -1,0 +1,440 @@
+// MEL script to construct (and print) my Crystal Castle
+// I modeled my castle after Castle Grayskull in He-Man/Masters of the Universe
+// The basic frame work is constructed of individual bricks held together my a single piece of
+// masonry (a cube for each straight wall, a pipe for each tower).  The skull face on the front 
+// of the castle is created by reading in a .txt file that has been compiled with numbers 
+// representing pixel value from an image of the actual castle.
+
+// PLEASE UPDATE LINE 20 WITH THE LOCATION OF THE "dhale_castle_data.txt" FILE INCLUDED WITH THIS CODE
+
+
+// This is where we draw the skull by first creating the cube that will become the face
+polyCube -w 25 -h 0.5 -d 25 -sx 98 -sy 1 -sz 97 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` "skullPlane";
+
+int $vertNum = 99;
+int $count = 0;
+int $numGets = 0;
+
+// this is where we set the path to the .txt file that holds the matrix of pixel value information
+string $filePath = "/Users/dan/Downloads/dhale_castle/dhale_castle_data.txt" ;
+
+$fileId = `fopen $filePath "r"` ;
+
+// We read each of the 98 rows of information and push back into buffer
+for ($numGets = 0; $numGets <99; $numGets++) {
+
+	// Must read row by row using fgetline because fread only allows for 1024 characters
+	string $data = `fgetline $fileId`;   
+
+	// separate values and push back into the buffer
+	string $buffer[] ;
+	int $numBufs = `tokenize $data "    " $buffer `;
+
+	// now we set the each vertex height to the corresponding pixel value
+	for ($count = 0; $count < $numBufs; $count++) {
+		int $vertexH = $buffer[ $count ];
+    	select -r skullPlane.vtx[ $vertNum ];
+    	move -r 0 $vertexH 0 ;		
+		$vertNum++;
+	}
+};
+
+// Position skull
+select -r skullPlane ;
+scale -r 0.267 0.003 0.3 ;
+rotate -r -os -90 180 0 ;
+move -r 0 7 10.5 ;
+
+// build the straight walls starting with bricks then masonry blocks
+int $count = 0;
+
+// create first wall brick
+polyCube -w 0.95 -h 0.45 -d 0.5 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` ("wallBrick" + $count);
+move -r -7 0 0;
+move -r 0 0.25 0;
+
+// Make first row of straight wall bricks and then select bricks
+for ($count = 1; $count < 14; $count++) {
+	duplicate -rr;
+	rename `ls-selection` ("wallBrick" + $count);
+	move -r 1 0 0;
+}
+for ($count = 0; $count < 14; $count++) {
+	select -add ("wallBrick" + $count);
+}
+
+// duplicate to create second row
+duplicate -rr;
+move -r 0.5 0.5 0;
+
+// create half bricks for offset ends
+select -r wallBrick0.f[5]; 
+move -r 0.475 0 0;
+select -r wallBrick0;
+duplicate -rr;
+move -r 13.525 0 0;
+
+// select all bricks
+for ($count = 0; $count < 29; $count++) {
+	select -add ("wallBrick" + $count);
+}
+
+// duplicate to create additional rows
+for ($count = 0; $count < 10; $count++) {
+	duplicate -rr;
+	move -r 0 1 0;
+}
+
+//build top row of larger bricks
+select -cl;
+select -tgl wallBrick291 wallBrick293 wallBrick295 wallBrick297 wallBrick299 wallBrick301 wallBrick303;
+duplicate -rr;
+scale -r 1.5 2 1.25;
+move -r 0 1.2 0;
+
+// select all bricks and group together
+for ($count = 0; $count < 325; $count++) {
+	select -add ("wallBrick" + $count);
+}
+doGroup 0 1 1;
+rename "group1" "wallBricks";
+
+// add center cube "masonry" to keep bricks together when printed
+polyCube -w 14 -h 11.25 -d 0.4 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` wallMasonry;
+move -r 0 5.675 0;
+
+// dupicate and position walls
+select -tgl wallBricks;
+doGroup 0 1 1;
+rename "group1" "frontWall";
+CenterPivot;
+move -r 0 -0.025 9.673;
+
+duplicate -rr;
+rename `ls-selection` "backWall";
+move -r 0 -0.025 -19.346;
+
+duplicate -rr;
+rename `ls-selection` "rightWall";
+rotate -r -os 0 90 0;
+move -r 6.173 0 9.673;
+
+duplicate -rr;
+rename `ls-selection` "leftWall";
+move -r -12.346 0 0;
+
+select -r frontWall backWall;
+scale -r 0.5 1 1 ;
+
+// build towers
+int $count = 0;
+
+// first tower brick
+polyCube -w 0.95 -h 0.45 -d 0.5 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` ("towerBrick" + $count);
+move -r 0 0.225 0;
+select -r towerBrick0.f[5];
+rotate -r -eu -p -0.475cm 0cm 0cm -fo 0 11.25 0;
+select -r towerBrick0.f[4];
+rotate -r -eu -p 0.475cm 0cm 0cm -fo 0 -11.25 0;
+// move pivot point to center of tower
+move -r 0 0 2.6730 towerBrick0.scalePivot towerBrick0.rotatePivot;
+select -r towerBrick0;
+
+// duplicate first ring of bricks and select
+for ($count = 1; $count < 16; $count++) {
+	duplicate -rr;
+	rename `ls-selection` ("towerBrick" + $count);
+	rotate -r -os 0 22.5 0;
+}
+for ($count = 0; $count < 16; $count++) {
+	select -add ("towerBrick" + $count);
+}
+
+// make wider for bottom row
+scale -r 1.24 1 1.24;
+// duplicate and scale back in
+for ($count = 0; $count < 4; $count++) {
+	duplicate -rr;
+	move -r 0 0.5 0 ;
+	rotate -r -os 0 11.25 0;
+	scale -r .95 1 .95 ;
+}
+// dupicate middle rows
+for ($count = 0; $count < 20; $count++) {
+	duplicate -rr;
+	move -r 0 0.5 0;
+	rotate -r -os 0 11.25 0 ;
+}
+// duplicate wider top rows and scale up
+for ($count = 0; $count < 4; $count++) {
+	duplicate -rr;
+	move -r 0 0.5 0 ;
+	rotate -r -os 0 11.25 0;
+	scale -r 1.04 1 1.04 ;
+}
+select -cl;
+
+// create top row of larger bricks
+for ($count = 432; $count < 448; $count++) {
+	select -r ("towerBrick" + $count) ;
+	duplicate -rr;
+	scale -r 1.5 3 1;
+	move -r 0 1.5 0;
+	$count++;
+}
+
+// select all tower bricks and group
+for ($count = 0; $count < 471; $count++) {
+	select -add ("towerBrick" + $count);
+}
+doGroup 0 1 1;
+rename "group1" "towerBricks";
+
+// create pipe to form central masonry for towers, must scale out ends to match wider rows
+polyPipe -r 2.8 -h 28.25 -t 0.25 -sa 32 -sh 7 -sc 0 -ax 0 1 0 -cuv 1 -rcp 0 -ch 1;
+rename `ls-selection` "towerMasonry";
+move -r 0 7.6 2.6730 ;
+select -r towerMasonry.f[224:255] ;
+scale -r -p 9.53674e-07cm 14.7325cm 2.672999cm 1.183709 1.183709 1.183709 ;
+select -r towerMasonry.f[480:511] ;
+scale -r -p 9.53674e-07cm 0.6075cm 2.672999cm 1.277449 1.277449 1.277449 ;
+move -r 0 -0.555351 0 ;
+select -r towerMasonry.vtx[0:31] ;
+scale -r 0 1 0 ;
+select -cl;
+
+// duplicate and position towers
+select -r towerBricks towerMasonry;
+doGroup 0 1 1;
+rename "group1" "frontRightTower";
+CenterPivot;
+move -r 6.173 0 7 ;
+
+duplicate -rr;
+rename `ls-selection` "backRightTower";
+move -r 0 0 -19.346;
+
+duplicate -rr;
+rename `ls-selection` "backLeftTower";
+move -r -12.346 0 0;
+
+duplicate -rr;
+rename `ls-selection` "frontLeftTower";
+move -r 0 0 19.346;
+select -cl;
+
+
+// build lower curved side walls starting with masonry
+polyPipe -r 9.5 -h 15.5 -t 0.2 -sa 38 -sh 0 -sc 0 -ax 0 1 0 -cuv 1 -rcp 0 -ch 1;
+rename `ls-selection` "lowerLeftWallMasonry";
+move -r 0 3.875 0 ;
+select -r lowerLeftWallMasonry.f[0:13] lowerLeftWallMasonry.f[24:51] lowerLeftWallMasonry.f[62:89] lowerLeftWallMasonry.f[100:127] lowerLeftWallMasonry.f[138:151] ;
+doDelete;
+select -r lowerLeftWallMasonry ;
+doGroup 0 1 1;
+rename "group1" "lowerLeftWall";
+
+int $count = 0;
+// make lower wall bricks from original wall, group separately
+select -r leftWall|wallBricks|wallBrick7 ;
+duplicate -rr;
+rename `ls-selection` ("lowerWallBrick" + $count);
+parent lowerWallBrick0 lowerLeftWall ;
+move -r -3.25 0.02 0;
+select -r lowerWallBrick0.f[5];
+rotate -r 0 3 0;
+select -r lowerWallBrick0.f[4];
+rotate -r 0 -3 0;
+select -r lowerWallBrick0 ;
+// move pivot point to match arc of wall
+move -r 9.5 0 0 lowerWallBrick0.scalePivot lowerWallBrick0.rotatePivot ;
+rotate -r -os 0 -45 0 ;
+
+// duplicate lower wall bricks to create bottom row
+for ($count = 0; $count < 15; $count++) {
+	duplicate -rr;
+	rotate -r -os 0 6 0 ;
+}
+select -cl;
+
+// select bottom row
+for ($count = 0; $count < 16; $count++) {
+	select -tgl ("lowerWallBrick" + $count);
+}
+// duplicate to create second row
+duplicate -rr;
+move -r 0 0.5 0 ;
+rotate -r -os 0 -3 0 ;
+
+// create half bricks for offset ends
+select -r lowerWallBrick16 ;
+scale -r 0.5 1 1 ;
+rotate -r -eu -fo 0 1 0 ;
+duplicate -rr;
+rotate -r -eu -fo 0 93 0 ;
+
+//select bottom two rows
+for ($count = 0; $count < 33; $count++) {
+	select -tgl ("lowerWallBrick" + $count);
+}
+
+// duplicate to build lower wall then group together
+for ($count = 0; $count < 7; $count++) {
+	duplicate -rr;
+	move -r 0 1 0 ;
+}
+select -cl;
+for ($count = 0; $count < 257; $count++) {
+	select -tgl ("lowerWallBrick" + $count);
+}
+doGroup 0 1 1;
+rename "group1" "lowerLeftWallBricks";
+select -cl;
+
+// scale up every other top row brick
+for ($count = 243; $count < 257; $count++) {
+	select -tgl ("lowerWallBrick" + $count);
+	$count++;
+}
+scale -r 1.5 2 1 ;
+move -r 0 0.2 0 ;
+select -cl;
+
+// remove alternate bricks
+for ($count = 242; $count < 257; $count++) {
+	select -tgl ("lowerWallBrick" + $count);
+	$count++;
+}
+doDelete;
+
+// duplicate lower left wall and rotate around central pivot to create lower right wall
+select -r lowerLeftWall;
+duplicate -rr;
+rotate -r 0 180 0 ;
+rename `ls-selection` "lowerRightWall";
+
+
+// construct windows and door
+int $count = 0;
+
+// create original window shape, filled with a cube and cylinder to cover bricks 
+// act as masonry to keep bricks together
+polyCube -w 2 -h 0.47 -d 3 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` "windowFillCube";
+doGroup 0 1 1;
+rename "group1" "Window";
+move -r 0 .1 0 ;
+polyCylinder -r 1 -h 0.47 -sx 20 -sy 1 -sz 1 -ax 0 1 0 -rcp 0 -cuv 3 -ch 1;
+rename `ls-selection` "windowFillCyl";
+parent `ls-selection` Window;
+move -r 0 .1 -1.5 ;
+
+// build bottom ledge
+polyCube -w 3 -h 0.5 -d 0.25 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` "windowLedge";
+parent `ls-selection` Window;
+move -r 0 0.25 1.5 ;
+
+// build side bricks
+polyCube -w 0.5 -h 0.5 -d 0.9 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` ("windowBrick" + $count);
+parent `ls-selection` Window;
+move -r -1.035 .25 -0.075 ;
+duplicate -rr;
+move -r 0 0 0.95 ;
+duplicate -rr;
+move -r 0 0 -1.9 ;
+select -tgl windowBrick0 windowBrick1 ;
+duplicate -rr;
+move -r 2.07 0 0 ;
+
+int $count = 0;
+
+// build top window curve
+polyCube -w 0.55 -h 0.5 -d 0.5 -sx 1 -sy 1 -sz 1 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` ("windowCurve" + $count);
+parent `ls-selection` Window;
+move -r 0 .25 -2.5 ;
+select -r windowCurve0.f[5] ;
+rotate -r -eu -p -0.25cm 0cm -2.457596cm -fo 0 18 0 ;
+select -r windowCurve0.f[4] ;
+rotate -r -eu -p 0.25cm 0cm -2.457596cm -fo 0 -18 0 ;
+select -r windowCurve0 ;
+// center pivot point for all bricks
+move -r 0 0 1 windowCurve0.scalePivot windowCurve0.rotatePivot ;
+
+for ($count = 0; $count < 4; $count++) {
+	duplicate -rr;
+	rotate -r -os 0 -36 0 ;
+	if ($count == 2)
+		rotate -r -os 0 -180 0 ;
+}
+int $count = 0;
+select -r Window ;
+rotate -r -os 90 0 0 ;
+move -r 6.175 9.62 12.45 ;
+
+// duplicate and scale for front door
+select -r Window ;
+duplicate -rr;
+rename `ls-selection` "frontDoor";
+move -r -6.175 -7.9 -2.57 ;
+scale -r 1.43 1 1.15 ;
+
+// add windows to each tower
+select -r Window ;
+rename `ls-selection` ("towerWindow" + $count);
+duplicate -rr;
+move -r -12.35 0 0 ;
+duplicate -rr;
+rotate -r 0 180 0 ;
+move -r 0 0 -24.9 ;
+duplicate -rr;
+move -r 12.35 0 0 ;
+
+// duplicate and scale smaller window for side wall
+select -r towerWindow0;
+duplicate -rr;
+rename `ls-selection` ("sideWindow" + $count);
+rotate -r  0 90 0 ;
+move -r 0.05 -0.4 -7.45 ;
+scale -r 0.5 1 0.5 ;
+
+// duplicate side windows around both sides
+for ($count = 0; $count < 11; $count++) {
+	duplicate -rr;
+	if ($count < 5)
+		move -r 0 0 -2 ;
+	if ($count == 5) {
+		rotate -r  0 180 0 ;
+		move -r -12.48 0 0 ;
+	}
+	if ($count > 5)
+		move -r 0 0 2 ;
+}
+int $count = 0;
+select -cl;
+
+// group windows together
+for ($count = 0; $count < 12; $count++) {
+	select -tgl ("sideWindow" + $count) ;
+	if ($count < 4) {
+		select -tgl ("towerWindow" + $count) ;
+	}
+}
+doGroup 0 1 1;
+rename "group1" "allWindows";
+
+//build base
+polyCube -w 25 -h 0.5 -d 30 -sx 1 -sy 1 -sz 0 -ax 0 1 0 -cuv 4 -ch 1;
+rename `ls-selection` "base";
+move -r 0 -0.2 0 ;
+
+// group all together
+select -all;
+doGroup 0 1 1;
+rename "group1" "Castle";
